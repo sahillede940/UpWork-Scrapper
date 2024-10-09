@@ -311,6 +311,7 @@ class CommentView(APIView):
 
             for comment_data in comments:
                 comment_data["job"] = job.id
+                print(comment_data['rating'])
                 serializer = CommentSerializer(data=comment_data)
                 if serializer.is_valid():
                     serializer.save()

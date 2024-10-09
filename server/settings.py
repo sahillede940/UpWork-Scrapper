@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,13 +81,20 @@ WSGI_APPLICATION = "server.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+SUPABASE_USER = os.getenv("SUPABASE_USER")
+SUPABASE_HOST = os.getenv("SUPABASE_HOST")
+SUPABASE_PORT = os.getenv("SUPABASE_PORT")
+SUPABASE_PASS = os.getenv("SUPABASE_PASS")
+SUPABASE_DBNAME = os.getenv("SUPABASE_DBNAME")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "UpWorkScrapper",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "localhost",
+        "NAME": SUPABASE_DBNAME,
+        "USER": SUPABASE_USER,
+        "PASSWORD": SUPABASE_PASS,
+        "HOST": SUPABASE_HOST,
+        "PORT": SUPABASE_PORT,
     }
 }
 

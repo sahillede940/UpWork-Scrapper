@@ -44,11 +44,14 @@ class Comment(models.Model):
     job = models.ForeignKey(Job, related_name="comments", on_delete=models.CASCADE)
     url = models.URLField(null=True, blank=True)
     rating = models.FloatField(blank=True, null=True)
-    billed_amount = models.CharField(default="0.0", max_length=200, null=True, blank=True)
+    billed_amount = models.CharField(
+        default="0.0", max_length=200, null=True, blank=True
+    )
     job_title = models.CharField(max_length=200, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     client_feedback = models.TextField(blank=True, null=True)
     freelancer_feedback = models.TextField(blank=True, null=True)
+    posted_on = models.CharField(max_length=200, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
