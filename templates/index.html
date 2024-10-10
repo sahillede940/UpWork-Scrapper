@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jobs List</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap");
+      * {
+        font-family: "Source Code Pro", monospace;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        padding: 20px;
+      }
+      /* General table styles */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+      }
+
+      /* Table header styles */
+      th {
+        background-color: #4caf50;
+        color: white;
+        font-weight: bold;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #ddd;
+      }
+
+      button {
+        background-color: #6da16f;
+        color: white;
+        border: none;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-left: 10px;
+      }
+
+      /* Table body styles */
+      td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+
+      /* Hover effect for table rows */
+      tr:hover {
+        background-color: #f1f1f1;
+      }
+
+      /* Add alternating row colors */
+      tbody tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+
+      /* Responsive table for mobile view */
+      @media screen and (max-width: 600px) {
+        table {
+          border: 0;
+        }
+
+        table thead {
+          display: none;
+        }
+
+        table tr {
+          margin-bottom: 10px;
+          display: block;
+          border-bottom: 2px solid #ddd;
+        }
+
+        table td {
+          display: block;
+          text-align: right;
+          font-size: 14px;
+          border-bottom: 1px solid #ddd;
+          position: relative;
+          padding-left: 50%;
+        }
+
+        table td::before {
+          content: attr(data-label);
+          position: absolute;
+          left: 0;
+          width: 50%;
+          padding-left: 10px;
+          font-weight: bold;
+          text-align: left;
+        }
+      }
+
+      /* Search input box styling */
+      #searchInput {
+        width: 100%;
+        padding: 12px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        box-sizing: border-box;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Jobs List</h1>
+    <button id="refresh">Refresh</button>
+
+    <!-- Search Input -->
+    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for jobs..." />
+
+    <table id="jobsTable">
+      <thead>
+        <tr>
+          <th>Job ID</th>
+          <th>ID</th>
+          <th>Job Title</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td data-label="Job ID">
+            {{ job.job_id }}
+            <button onclick="copyToClipboard('{{ job.job_id }}')">Copy</button>
+          </td>
+          <td data-label="ID">
+            {{ job.id }}
+            <button onclick="copyToClipboard('{{ job.id }}')">Copy</button>
+          </td>
+          <td data-label="Job Title">{{ job.title }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3">No jobs available.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <script>
+      function searchTable() {
+        var input, filter, table, tr, td, i, j, txtValue;
+        input = document.getElementById("searchInput");
+        filter = input.value.toLowerCase();
+        table = document.getElementById("jobsTable");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 1; i < tr.length; i++) {
+          tr[i].style.display = "none";
+          td = tr[i].getElementsByTagName("td");
+          for (j = 0; j < td.length; j++) {
+            if (td[j]) {
+              txtValue = td[j].textContent || td[j].innerText;
+              if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      document.getElementById("refresh").addEventListener("click", function () {
+        window.location.reload();
+      });
+
+      function copyToClipboard(text) {
+        var tempInput = document.createElement("input");
+        tempInput.style.position = "absolute";
+        tempInput.style.left = "-9999px";
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+      }
+    </script>
+  </body>
+</html>

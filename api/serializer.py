@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Job_List, Job, Comment
+from .models import Job_List, Job, Comment, LLMResponse
 
 
 class JobListSerializer(serializers.ModelSerializer):
@@ -18,4 +18,9 @@ class JobSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
+        fields = "__all__"
+
+class LLMResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LLMResponse
         fields = "__all__"

@@ -1,10 +1,23 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
-from .models import Job_List, Job, Comment
-from .serializer import JobListSerializer, JobSerializer, CommentSerializer
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+import logging
+from .models import Job_List, Job, Comment, LLMResponse
+from .serializer import (
+    JobListSerializer,
+    JobSerializer,
+    CommentSerializer,
+    LLMResponseSerializer,
+)
+from .utils.LLM import LLM
+from django.shortcuts import render
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 class JobList(APIView):
@@ -311,12 +324,30 @@ class CommentView(APIView):
 
             for comment_data in comments:
                 comment_data["job"] = job.id
-                print(comment_data['rating'])
+                print(comment_data["rating"])
                 serializer = CommentSerializer(data=comment_data)
                 if serializer.is_valid():
                     serializer.save()
                 else:
                     continue  # Skip invalid comments
+
+            try:
+                data = LLM(job_id=job_id)
+                if data.success:
+                    llm_resp = LLMResponse.objects.create(
+                        job=job,
+                        client_names=data.get("client_names"),
+                        keywords=data.get("keywords"),
+                        company=data.get("company"),
+                        client_location=data.get("client_location"),
+                        other_data=data,
+                    )
+
+                    # save llm response
+                    llm_resp.save()
+            
+            except Exception as e:
+                pass
 
             return Response(
                 {
@@ -346,39 +377,115 @@ class CommentView(APIView):
             )
 
 
-class JobRetrive(APIView):
-
+class JobRetrieve(APIView):
     permission_classes = []
 
     def get(self, request):
         try:
             job_id = request.query_params.get("job_id")
-            id = request.query_params.get("id")
+            pk = request.query_params.get("id")
+            # its a boolean value
+            refresh_llm = request.query_params.get("refresh_llm") == "true"
+
+            if not job_id and not pk:
+                raise ValidationError("Either 'job_id' or 'id' is required")
+
+            # Fetch the job by job_id or id
+            job = None
             if job_id:
-                job = get_object_or_404(Job.objects.all(), job_id=job_id)
-            elif id:
-                job = get_object_or_404(Job.objects.all(), id=id)
-            else:
+                job = get_object_or_404(Job, job_id=job_id)
+            elif pk:
+                job = get_object_or_404(Job, id=pk)
+
+            if not job:
                 return Response(
-                    {"message": "Job ID or PK is required", "success": False},
-                    status=status.HTTP_400_BAD_REQUEST,
+                    {"message": "Job not found", "success": False},
+                    status=status.HTTP_404_NOT_FOUND,
                 )
+
+            # Handle LLM response
+            if refresh_llm:
+                llm_data = self.get_llm_data(job_id=job_id, pk=pk)
+            else:
+                llm_data = self.get_or_create_llm_response(job, job_id, pk)
+
+            # Fetch comments and serialize job
             comments = Comment.objects.filter(job=job)
             comment_serializer = CommentSerializer(comments, many=True)
             job_serializer = JobSerializer(job)
+
+            # Construct response
             return Response(
                 {
                     "job": job_serializer.data,
+                    "llm_response": llm_data,
                     "comments": comment_serializer.data,
+                    "refresh_llm": refresh_llm,
                     "message": "Job and comments retrieved successfully",
                     "success": True,
                 }
             )
+
+        except ValidationError as ve:
+            logger.error(f"Validation error: {ve}")
+            return Response(
+                {"message": str(ve), "success": False},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
+            logger.error(f"An error occurred: {e}")
             return Response(
                 {"message": f"An error occurred: {str(e)}", "success": False},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    def get_llm_data(self, job_id=None, pk=None):
+        """
+        Fetch or initialize LLM data.
+        """
+        try:
+            # Simulating LLM call or response generation
+            llm = LLM(job_id=job_id, id=pk)
+            return {
+                "client_names": llm.get("client_names"),
+                "keywords": llm.get("keywords"),
+                "company": llm.get("company"),
+                "client_location": llm.get("client_location"),
+                "other_data": llm,
+                "success": llm.get("success"),
+            }
+        except Exception as e:
+            logger.error(f"Error fetching LLM data: {e}")
+            raise
+
+    @transaction.atomic
+    def get_or_create_llm_response(self, job, job_id=None, pk=None):
+        """
+        Retrieve existing LLM response or create a new one.
+        """
+        try:
+            llm_response = job.llm_responses.first()
+            if llm_response:
+                return LLMResponseSerializer(llm_response).data
+
+            # If no response exists, create a new one
+            llm_data = self.get_llm_data(job_id=job_id, pk=pk)
+            if not llm_data.get("success"):
+                return llm_data
+            llm_response = LLMResponse.objects.create(
+                job=job,
+                client_names=llm_data.get("client_names"),
+                keywords=llm_data.get("keywords"),
+                company=llm_data.get("company"),
+                client_location=llm_data.get("client_location"),
+                other_data=llm_data,
+            )
+            llm_response.save()
+            return LLMResponseSerializer(llm_response).data
+
+        except Exception as e:
+            logger.error(f"Error creating LLM response: {e}")
+            raise
 
 
 class AdminControl(APIView):
@@ -411,3 +518,34 @@ class AdminControl(APIView):
                 {"message": f"An error occurred: {str(e)}", "success": False},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class LLMView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        try:
+            job_id = request.query_params.get("job_id")
+            id = request.query_params.get("id")
+            res = LLM(job_id=job_id, id=id)
+            return Response(
+                {
+                    "message": "LLM data retrieved successfully",
+                    "success": True,
+                    "data": res,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"message": f"An error occurred: {str(e)}", "success": False},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+def get_all_jobs(request):
+
+    jobs = Job.objects.all()
+    jobs = JobSerializer(jobs, many=True).data
+
+    return render(request, "index.html", {"jobs": jobs})

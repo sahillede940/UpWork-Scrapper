@@ -58,3 +58,19 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.job_title
+
+
+class LLMResponse(models.Model):
+    job = models.ForeignKey(Job, related_name="llm_responses", on_delete=models.CASCADE)
+    # array of client names
+    client_names = models.JSONField(default=list, blank=True, null=True)
+    keywords = models.JSONField(default=list, blank=True, null=True)
+    company = models.CharField(max_length=200, null=True, blank=True)
+    client_location = models.CharField(max_length=200, null=True, blank=True)
+    other_data = models.JSONField(default=dict, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
