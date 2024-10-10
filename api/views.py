@@ -540,7 +540,7 @@ class GetAllJobs(APIView):
     permission_classes = []
 
     def get(self, request):
-        jobs = Job.objects.all()
+        jobs = Job.objects.all().order_by("-created_at")
         serialized_jobs = JobSerializer(jobs, many=True).data
         return render(request, "index.html", {"jobs": serialized_jobs})
 

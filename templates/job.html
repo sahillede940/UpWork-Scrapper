@@ -107,11 +107,18 @@
           <dt>Job Title</dt>
           <dd>{% if job.title %}{{ job.title }}{% else %}N/A{% endif %}</dd>
 
+          <dt>Company</dt>
+          <dd>{% if job.company %}{{ job.company }}{% else %}N/A{% endif %}</dd>
+
           <dt>Clients Name</dt>
           <dd>{% for client in llm_response.client_names %} {{ client }}, {% endfor %}</dd>
 
           <dt>Location</dt>
           <dd>{% if job.client_location %}{{ job.client_location }}{% else %}N/A{% endif %}</dd>
+
+          <!-- rating -->
+          <dt>Rating</dt>
+          <dd>{{ job.rating }}</dd>
 
           <dt>Job URL</dt>
           <dd>
